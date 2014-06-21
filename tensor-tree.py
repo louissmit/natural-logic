@@ -39,14 +39,14 @@ class Tree(Leaf):
         g = self.nld(out) * delta
         l, r = self.left.vec, self.right.vec
         
-        delta_l = (T.dot(r) + M[:,:M.shape[0]].T).dot(g) # TODO: check for transpose error
-        delta_r = (l.dot(T) + M[:,M.shape[0]:].T).dot(g) # TODO: check for transpose error
+        delta_l = (T.dot(r).T + M[:,:M.shape[0]].T).dot(g)
+        delta_r = (l.dot(T).T + M[:,M.shape[0]:].T).dot(g)
         (gWl, gbl, gMl, gTl) = self.left.grad(delta_l)
         (gWr, gbr, gMr, gTr) = self.right.grad(delta_r)
         
         gb = gbl + gbr + g
         gM = gMl + gMr + g[:, None] * np.append(l, r)
-        gT = gTl + gTr + g[:, None, None].T * (l[:, None] * r) # TODO: check for transpose error
+        gT = gTl + gTr + g[None, None].T * (l[:, None] * r)
         
         return (gWl + gWr, gb, gM, gT)
         
