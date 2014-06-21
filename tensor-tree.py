@@ -19,7 +19,7 @@ class Leaf():
         return (gW, gb, gM, gT)
 
 class Tree(Leaf):
-    def __init__(self, left, right, nl=lambda x: max(0,x), nld=lambda x: int(x>0)):
+    def __init__(self, left, right, nl=lambda x: max(0.,x), nld=lambda x: float(x>0)):
         self.left = left
         self.right = right
         self.nl = np.vectorize(nl) # transfer function
