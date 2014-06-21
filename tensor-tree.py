@@ -39,8 +39,8 @@ class Tree(Leaf):
         g = self.nld(out) * delta
         l, r = self.left.vec, self.right.vec
         
-        delta_l = (T.dot(r).T + M[:,:M.shape[0]].T).dot(g)
-        delta_r = (l.dot(T).T + M[:,M.shape[0]:].T).dot(g)
+        delta_l = (T.dot(r).T + M[:,:M.shape[1]/2].T).dot(g)
+        delta_r = (l.dot(T).T + M[:,M.shape[1]/2:].T).dot(g)
         (gWl, gbl, gMl, gTl) = self.left.grad(delta_l)
         (gWr, gbr, gMr, gTr) = self.right.grad(delta_r)
         
@@ -53,15 +53,14 @@ class Tree(Leaf):
 
 
 n=2 # vector size
+h=3 # hidden layer size
 m=1000 # dictionary size
 
-# Globals:
 W = dok_matrix((m,n)) # Keep word vectors in a sparse array?
-b = np.random.randn(n)
-M = np.random.randn(n,2*n)
-T = np.random.randn(n,n,n)
+b = np.random.randn(h)
+M = np.random.randn(h,2*n)
+T = np.random.randn(h,n,n)
 
-# Test:
 t = Tree(Leaf(np.random.randn(n)), Leaf(np.random.randn(n)))
 t.do()
-t.grad(np.random.randn(n), np.random.randn(n))
+t.grad(np.random.randn(h), np.random.randn(h))
