@@ -79,33 +79,33 @@ def step(left_tree, right_tree, true_relation):
     
     return cost, (gS, (gb2, gM2, gT2), (gb, gM, gT)), np.argmax(softmax)
 
+if __name__ == "__main__":
+    n=2 # vector size
+    h=3 # hidden layer size
+    m=1000 # dictionary size
+    c1=4 # number of comparison classes
+    c2=3 # size of comparison layer
 
-n=2 # vector size
-h=3 # hidden layer size
-m=1000 # dictionary size
-c1=4 # number of comparison classes
-c2=3 # size of comparison layer
+    W = dok_matrix((m,n)) # Keep word vectors in a sparse array?
 
-W = dok_matrix((m,n)) # Keep word vectors in a sparse array?
+    nl  = np.vectorize(lambda x: max(0.,x)) # composition transfer function
+    nld = np.vectorize(lambda x: float(x>0)) # composition transfer derivative
+    # Composition layer
+    b = np.random.randn(h)
+    M = np.random.randn(h,2*n)
+    T = np.random.randn(h,n,n)
 
-nl  = np.vectorize(lambda x: max(0.,x)) # composition transfer function
-nld = np.vectorize(lambda x: float(x>0)) # composition transfer derivative
-# Composition layer
-b = np.random.randn(h)
-M = np.random.randn(h,2*n)
-T = np.random.randn(h,n,n)
+    nl2  = np.vectorize(lambda x: max(0.,x)) # comparison transfer function
+    nld2 = np.vectorize(lambda x: float(x>0)) # comparison transfer derivative
+    # Softmax layer
+    S  = np.random.randn(c1, c2+1)
+    # Comparison layer
+    b2 = np.random.randn(c2)
+    M2 = np.random.randn(c2,2*h)
+    T2 = np.random.randn(c2,h,h)
 
-nl2  = np.vectorize(lambda x: max(0.,x)) # comparison transfer function
-nld2 = np.vectorize(lambda x: float(x>0)) # comparison transfer derivative
-# Softmax layer
-S  = np.random.randn(c1, c2+1)
-# Comparison layer
-b2 = np.random.randn(c2)
-M2 = np.random.randn(c2,2*h)
-T2 = np.random.randn(c2,h,h)
-
-step(
-    Tree(Leaf(np.random.randn(n)), Leaf(np.random.randn(n))),
-    Tree(Leaf(np.random.randn(n)), Leaf(np.random.randn(n))),
-    2
-)
+    print step(
+        Tree(Leaf(np.random.randn(n)), Leaf(np.random.randn(n))),
+        Tree(Leaf(np.random.randn(n)), Leaf(np.random.randn(n))),
+        2
+    )
