@@ -102,8 +102,15 @@ class SGD():
         
         return cost, (gS, (gT2, gM2, gb2), (gT, gM, gb), gW), np.argmax(softmax)
 
-class Parameters(): pass
 class HyperParameters(): pass
+class Parameters():
+    def __init__(self, hyp):
+        self.vocab = {
+            i: np.random.randn(hyp.word_size) for i in range(hyp.vocab_size)
+        }
+        self.composition = init_ntn_params(hyp.word_size, hyp.word_size)
+        self.comparison  = init_ntn_params(hyp.word_size, hyp.comparison_size)
+        self.softmax = np.random.randn(hyp.classes, hyp.comparison_size+1)
 
 if __name__ == "__main__":
     relu  = np.vectorize(lambda x: max(0.,x))
@@ -120,10 +127,6 @@ if __name__ == "__main__":
     hyp.comparison_backtrans = relud
 
     param = Parameters()
-    param.vocab = { 0: np.random.randn(hyp.word_size) }
-    param.composition = init_ntn_params(hyp.word_size, hyp.word_size)
-    param.comparison  = init_ntn_params(hyp.word_size, hyp.comparison_size)
-    param.softmax = np.random.randn(hyp.classes, hyp.comparison_size+1)
 
     l = Leaf(0)
     r = Tree(Tree(Leaf(0), Leaf(0)), Leaf(0))
