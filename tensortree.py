@@ -16,12 +16,21 @@ def tensorGrad ((l,r), (T, M, b), delta, nld, output):
     delta_r = (l.dot(T).T + M[:,M.shape[1]/2:].T).dot(g)
     return (gT, gM, gb), (delta_l, delta_r)
 
+def ntn_dtype(i, o):
+    """ The dtype of the parameters of a Neural Tensor Network"""
+    return np.dtype([('b', '<f8', (o,)),       # bias
+                     ('M', '<f8', (o, 2 * i)), # matrix
+                     ('T', '<f8', (o, i, i))]) # tensor
+
+def random_dtype(dt):
+    """ Random numpy array for a given dtype"""
+    return np.array(tuple([random.randn(*a[2]) for a in dt.descr]), dtype=dt)
 
 class Leaf():
-    def __init__(self, vec, index=0):
+    def __init__(self, vec, index=0, hyp, param):
         self.vec = vec
         self.i = index
-    
+
     def do(self):
         return self.vec
     
@@ -59,60 +68,64 @@ class Tree(Leaf):
         
         return ((gTl + gTr + gT, gMl + gMr + gM, gbl + gbr + gb), gWl + gWr)
 
-def step(left_tree, right_tree, true_relation):
-    def normalize(v):
-        norm = np.linalg.norm(v)
-        return v / norm if norm else v
+class SGD():
+    def __init__(self, hyp, param = None):
+        self.hyp = hyp
+        if param:
+            self.param = param
 
-    ## Run forward
-    l, r = left_tree.do(), right_tree.do()
-    comparison = tensorLayer((l,r), (T2, M2, b2), nl2)
-    softmax = normalize(np.exp( S.dot(np.append(1, comparison)) ))
+    def cost_and_grad(self, left_tree, right_tree, true_relation):
+        def normalize(v):
+            norm = np.linalg.norm(v)
+            return v / norm if norm else v
 
-    cost = -np.log(softmax[true_relation])
-    
-    ## Get gradients
-    # softmax
-    diff = softmax - np.eye(c1)[true_relation]
-    delta = ( nld2(np.append(1, comparison)) * S.T.dot(diff) )[1:]
-    gS = np.append(1, comparison) * diff[:, None]
-    # comparison
-    (gT2, gM2, gb2), (delta_l, delta_r) = \
-            tensorGrad ((l,r), (T2, M2, b2), delta, nld2, comparison)
-    # composition
-    ((gTl, gMl, gbl), gWl) = left_tree.grad (delta_l, l)
-    ((gTr, gMr, gbr), gWr) = right_tree.grad(delta_r, r)
-    ((gT, gM, gb), gW) = ((gTl + gTr, gMl + gMr, gbl + gbr), gWl + gWr)
-    
-    return cost, (gS, (gT2, gM2, gb2), (gT, gM, gb), gW), np.argmax(softmax)
+        ## Run forward
+        l, r = left_tree.do(), right_tree.do()
+        comparison = tensorLayer((l,r), (T2, M2, b2), nl2)
+        softmax = normalize(np.exp( S.dot(np.append(1, comparison)) ))
+
+        cost = -np.log(softmax[true_relation])
+        
+        ## Get gradients
+        # softmax
+        diff = softmax - np.eye(c1)[true_relation]
+        delta = ( nld2(np.append(1, comparison)) * S.T.dot(diff) )[1:]
+        gS = np.append(1, comparison) * diff[:, None]
+        # comparison
+        (gT2, gM2, gb2), (delta_l, delta_r) = \
+                tensorGrad ((l,r), (T2, M2, b2), delta, nld2, comparison)
+        # composition
+        ((gTl, gMl, gbl), gWl) = left_tree.grad (delta_l, l)
+        ((gTr, gMr, gbr), gWr) = right_tree.grad(delta_r, r)
+        ((gT, gM, gb), gW) = ((gTl + gTr, gMl + gMr, gbl + gbr), gWl + gWr)
+        
+        return cost, (gS, (gT2, gM2, gb2), (gT, gM, gb), gW), np.argmax(softmax)
+
+class Parameters(): pass
+class HyperParameters(): pass
 
 if __name__ == "__main__":
-    n=2 # vector size
-    h=3 # hidden layer size
-    m=1000 # dictionary size
-    c1=4 # number of comparison classes
-    c2=3 # size of comparison layer
+    relu  = np.vectorize(lambda x: max(0.,x))
+    relud = np.vectorize(lambda x: float(x>0))
 
-    W = dok_matrix((m,n)) # Keep word vectors in a sparse array?
+    hyp = HyperParameters()
+    hyp.vocab_size = 100
+    hyp.word_size = 2
+    hyp.composition_size = 3
+    hyp.comparison_size = 4
+    hyp.classes = 7
+    hyp.composition_transfer = relu
+    hyp.composition_backtrans = relud
+    hyp.comparison_transfer = relu
+    hyp.comparison_backtrans = relud
 
-    nl  = np.vectorize(lambda x: max(0.,x)) # composition transfer function
-    nld = np.vectorize(lambda x: float(x>0)) # composition transfer derivative
-    # Composition layer
-    b = np.random.randn(h)
-    M = np.random.randn(h,2*n)
-    T = np.random.randn(h,n,n)
+    param = Parameters()
+    param.vocab = dok_matrix((hyp.vocab_size, hyp.word_size))
+    param.composition = random_dtype(ntn_dtype(hyp.word_size, hyp.composition_size))
+    param.comparison  = random_dtype(ntn_dtype(hyp.composition_size, hyp.comparison_size))
+    param.softmax = np.random.randn(hyp.classes, hyp.comparison_size)
 
-    nl2  = np.vectorize(lambda x: max(0.,x)) # comparison transfer function
-    nld2 = np.vectorize(lambda x: float(x>0)) # comparison transfer derivative
-    # Softmax layer
-    S  = np.random.randn(c1, c2+1)
-    # Comparison layer
-    b2 = np.random.randn(c2)
-    M2 = np.random.randn(c2,2*h)
-    T2 = np.random.randn(c2,h,h)
 
-    print step(
-        Tree(Leaf(np.random.randn(n)), Leaf(np.random.randn(n))),
-        Tree(Leaf(np.random.randn(n)), Leaf(np.random.randn(n))),
-        2
-    )
+
+
+
