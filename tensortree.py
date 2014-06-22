@@ -25,7 +25,7 @@ class Leaf():
     def do(self):
         return self.vec
     
-    def grad(self, delta):
+    def grad(self, delta, output):
         """ Create the gradients of a node """
         global T, M, b, W
         gb, gM, gT = np.zeros(b.shape), np.zeros(M.shape), np.zeros(T.shape)
@@ -54,8 +54,8 @@ class Tree(Leaf):
         (gT, gM, gb), (delta_l, delta_r) = \
             tensorGrad ((l,r), (T, M, b), delta, nld, output)
 
-        ((gTl, gMl, gbl), gWl) = self.left.grad(delta_l)
-        ((gTr, gMr, gbr), gWr) = self.right.grad(delta_r)
+        ((gTl, gMl, gbl), gWl) = self.left.grad (delta_l, l)
+        ((gTr, gMr, gbr), gWr) = self.right.grad(delta_r, r)
         
         return ((gTl + gTr + gT, gMl + gMr + gM, gbl + gbr + gb), gWl + gWr)
 
@@ -88,7 +88,6 @@ def step(left_tree, right_tree, true_relation):
 
 if __name__ == "__main__":
     n=2 # vector size
-    h=3 # hidden layer size
     m=1000 # dictionary size
     c1=4 # number of comparison classes
     c2=3 # size of comparison layer
@@ -98,9 +97,9 @@ if __name__ == "__main__":
     nl  = np.vectorize(lambda x: max(0.,x)) # composition transfer function
     nld = np.vectorize(lambda x: float(x>0)) # composition transfer derivative
     # Composition layer
-    b = np.random.randn(h)
-    M = np.random.randn(h,2*n)
-    T = np.random.randn(h,n,n)
+    b = np.random.randn(n)
+    M = np.random.randn(n,2*n)
+    T = np.random.randn(n,n,n)
 
     nl2  = np.vectorize(lambda x: max(0.,x)) # comparison transfer function
     nld2 = np.vectorize(lambda x: float(x>0)) # comparison transfer derivative
@@ -108,11 +107,11 @@ if __name__ == "__main__":
     S  = np.random.randn(c1, c2+1)
     # Comparison layer
     b2 = np.random.randn(c2)
-    M2 = np.random.randn(c2,2*h)
-    T2 = np.random.randn(c2,h,h)
+    M2 = np.random.randn(c2,2*n)
+    T2 = np.random.randn(c2,n,n)
 
     print step(
         Tree(Leaf(np.random.randn(n)), Leaf(np.random.randn(n))),
-        Tree(Leaf(np.random.randn(n)), Leaf(np.random.randn(n))),
+        Tree(Tree(Leaf(np.random.randn(n)), Leaf(np.random.randn(n))), Leaf(np.random.randn(n))),
         2
     )
