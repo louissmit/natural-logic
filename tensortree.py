@@ -31,7 +31,7 @@ class Leaf():
         gb, gM, gT = np.zeros(b.shape), np.zeros(M.shape), np.zeros(T.shape)
         gW = dok_matrix(W.shape) # Keep word gradients in a sparse array
         gW[self.i] = delta
-        return (gW, gb, gM, gT)
+        return ((gT, gM, gb), gW)
 
 class Tree(Leaf):
     def __init__(self, left, right):
@@ -54,10 +54,10 @@ class Tree(Leaf):
         (gT, gM, gb), (delta_l, delta_r) = \
             tensorGrad ((l,r), (T, M, b), delta, nld, output)
 
-        (gWl, gbl, gMl, gTl) = self.left.grad(delta_l)
-        (gWr, gbr, gMr, gTr) = self.right.grad(delta_r)
+        ((gTl, gMl, gbl), gWl) = self.left.grad(delta_l)
+        ((gTr, gMr, gbr), gWr) = self.right.grad(delta_r)
         
-        return (gWl + gWr, gbl + gbr + gb, gMl + gMr + gM, gTl + gTr + gT)
+        return ((gTl + gTr + gT, gMl + gMr + gM, gbl + gbr + gb), gWl + gWr)
 
 def step(left_tree, right_tree, true_relation):
     def normalize(v):
@@ -80,11 +80,11 @@ def step(left_tree, right_tree, true_relation):
     (gT2, gM2, gb2), (delta_l, delta_r) = \
             tensorGrad ((l,r), (T2, M2, b2), delta, nld2, comparison)
     # composition
-    (gWl, gbl, gMl, gTl) = left_tree.grad (delta_l, l)
-    (gWr, gbr, gMr, gTr) = right_tree.grad(delta_r, r)
-    gb, gM, gT = (gbl + gbr, gMl + gMr, gTl + gTl)
+    ((gTl, gMl, gbl), gWl) = left_tree.grad (delta_l, l)
+    ((gTr, gMr, gbr), gWr) = right_tree.grad(delta_r, r)
+    ((gT, gM, gb), gW) = ((gTl + gTr, gMl + gMr, gbl + gbr), gWl + gWr)
     
-    return cost, (gS, (gb2, gM2, gT2), (gb, gM, gT)), np.argmax(softmax)
+    return cost, (gS, (gT2, gM2, gb2), (gT, gM, gb), gW), np.argmax(softmax)
 
 if __name__ == "__main__":
     n=2 # vector size
