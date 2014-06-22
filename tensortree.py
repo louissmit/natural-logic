@@ -76,8 +76,8 @@ class SGD():
             norm = np.linalg.norm(v)
             return v / norm if norm else v
 
-        nl  = hyp.comparison_transfer
-        nld = hyp.comparison_backtrans
+        nl  = s.hyp.comparison_transfer
+        nld = s.hyp.comparison_backtrans
         S = param.softmax
 
         ## Run forward
@@ -89,7 +89,7 @@ class SGD():
         
         ## Get gradients
         # softmax
-        diff = softmax - np.eye(hyp.classes)[true_relation]
+        diff = softmax - np.eye(s.hyp.classes)[true_relation]
         delta = ( nld(np.append(1, comparison)) * S.T.dot(diff) )[1:]
         gS = np.append(1, comparison) * diff[:, None]
         # comparison
