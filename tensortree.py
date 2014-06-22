@@ -2,6 +2,21 @@ from collections import Counter
 from scipy.sparse import dok_matrix
 import numpy as np
 
+def tensorLayer((l,r), (T, M, b), nl):
+    """ Compute Inner Tensor Layer """
+    return nl(l.T.dot(T).dot(r) + M.dot(np.append(l,r)) + b)
+
+def tensorGrad ((l,r), (T, M, b), delta, nld, output):
+    """ Compute Tensor Layer Gradients """
+    g = nld(output) * delta
+    gb = g
+    gM = g[:, None] * np.append(l, r)
+    gT = g[None, None].T * (l[:, None] * r)
+    delta_l = (T.dot(r).T + M[:,:M.shape[1]/2].T).dot(g)
+    delta_r = (l.dot(T).T + M[:,M.shape[1]/2:].T).dot(g)
+    return (gT, gM, gb), (delta_l, delta_r)
+
+
 class Leaf():
     def __init__(self, vec, index=0):
         self.vec = vec
@@ -28,25 +43,21 @@ class Tree(Leaf):
         """ Forward pass """
         global T, M, b, nl
         l, r = self.left.do(), self.right.do()
-        self.vec = nl(l.T.dot(T).dot(r) + M.dot(np.append(l,r)) + b)
+        self.vec = tensorLayer((l,r), (T, M, b), nl)
         return self.vec
     
-    def grad(self, delta, out):
+    def grad(self, delta, output):
         """ Get the gradients of this tree """
         global T, M, b, nld
-        g = nld(out) * delta
         l, r = self.left.vec, self.right.vec
         
-        delta_l = (T.dot(r).T + M[:,:M.shape[1]/2].T).dot(g)
-        delta_r = (l.dot(T).T + M[:,M.shape[1]/2:].T).dot(g)
+        (gT, gM, gb), (delta_l, delta_r) = \
+            tensorGrad ((l,r), (T, M, b), delta, nld, output)
+
         (gWl, gbl, gMl, gTl) = self.left.grad(delta_l)
         (gWr, gbr, gMr, gTr) = self.right.grad(delta_r)
         
-        gb = gbl + gbr + g
-        gM = gMl + gMr + g[:, None] * np.append(l, r)
-        gT = gTl + gTr + g[None, None].T * (l[:, None] * r)
-        
-        return (gWl + gWr, gb, gM, gT)
+        return (gWl + gWr, gbl + gbr + gb, gMl + gMr + gM, gTl + gTr + gT)
 
 def step(left_tree, right_tree, true_relation):
     def normalize(v):
@@ -55,7 +66,7 @@ def step(left_tree, right_tree, true_relation):
 
     ## Run forward
     l, r = left_tree.do(), right_tree.do()
-    comparison = nl2(l.T.dot(T2).dot(r) + M2.dot(np.append(l,r)) + b2)
+    comparison = tensorLayer((l,r), (T2, M2, b2), nl2)
     softmax = normalize(np.exp( S.dot(np.append(1, comparison)) ))
 
     cost = -np.log(softmax[true_relation])
@@ -66,14 +77,10 @@ def step(left_tree, right_tree, true_relation):
     delta = ( nld2(np.append(1, comparison)) * S.T.dot(diff) )[1:]
     gS = np.append(1, comparison) * diff[:, None]
     # comparison
-    g = nld2(comparison) * delta
-    gb2 = g
-    gM2 = g[:, None] * np.append(l, r)
-    gT2 = g[None, None].T * (l[:, None] * r)
+    (gT2, gM2, gb2), (delta_l, delta_r) = \
+            tensorGrad ((l,r), (T2, M2, b2), delta, nld2, comparison)
     # composition
-    delta_l = (T2.dot(r).T + M2[:,:M2.shape[1]/2].T).dot(g)
-    delta_r = (l.dot(T2).T + M2[:,M2.shape[1]/2:].T).dot(g)
-    (gWl, gbl, gMl, gTl) = left_tree.grad( delta_l, l)
+    (gWl, gbl, gMl, gTl) = left_tree.grad (delta_l, l)
     (gWr, gbr, gMr, gTr) = right_tree.grad(delta_r, r)
     gb, gM, gT = (gbl + gbr, gMl + gMr, gTl + gTl)
     
