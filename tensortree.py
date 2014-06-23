@@ -34,6 +34,9 @@ class Leaf():
         gW[self.i] = delta
         return ((gT, gM, gb), gW)
 
+    def __str__(self):
+        return str(self.i)
+
 class Tree(Leaf):
     def __init__(self, left, right):
         self.left = left
@@ -58,6 +61,8 @@ class Tree(Leaf):
         
         return ((gTl + gTr + gT, gMl + gMr + gM, gbl + gbr + gb), gWl + gWr)
 
+    def __str__(self):
+        return '('+str(self.left) +' '+ str(self.right)+')'
 
 if __name__ == "__main__":
     nl  = np.vectorize(lambda x: max(0.,x))

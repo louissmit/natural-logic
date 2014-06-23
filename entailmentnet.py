@@ -9,6 +9,7 @@ class Net():
         def ntn_dims(i,o):
             return ((o, i, i), (o, 2*i), (o,))
 
+        # softmax, comparison, composition, vocabulary
         self.dims = ((hyp.classes, hyp.comparison_size+1),) \
             + ntn_dims(hyp.word_size, hyp.comparison_size) \
             + ntn_dims(hyp.word_size, hyp.word_size) \
@@ -16,6 +17,7 @@ class Net():
         self.theta = np.random.randn(np.sum(np.prod(d) for d in self.dims))
 
     def params(self):
+        """ Grab the slices of theta and assemble them """
         i=0
         out = []
         for d in self.dims:
@@ -48,7 +50,7 @@ class Net():
         # softmax
         diff = softmax - np.eye(s.hyp.classes)[true_relation]
         delta = ( nld(np.append(1, comparison)) * S.T.dot(diff) )[1:]
-        gS = np.append(1, comparison) * diff[:, None]
+        gS = np.append(1, comparison) * diff[:, None] # outer product?
         # comparison
         (gT2, gM2, gb2), (delta_l, delta_r) = \
             tensorGrad ((l,r), (T2, M2, b2), delta, nld, comparison)
@@ -61,6 +63,37 @@ class Net():
         theta_grad = np.hstack(g.flat for g in (gS, gT2, gM2, gb2, gT, gM, gb, gW.todense()))
         
         return cost, theta_grad, np.argmax(softmax)
+
+    def adaGrad(self, data):
+        # http://xcorr.net/2014/01/23/adagrad-eliminating-learning-rates-in-stochastic-gradient-descent/
+        indexes = np.arange(len(data))
+        master_stepsize = 1e-2 # for example
+        fudge_factor = 1e-6 # for numerical stability
+        historical_grad = np.zeros(self.theta.size)
+        historical_cost = float('inf')
+        converged = False
+
+        while not converged:
+            np.random.shuffle(indexes)
+            batch = indexes[:self.hyp.batch_size]
+            # Get gradient of batch
+            grad = np.zeros(self.theta.size)
+            cost, correct, total = 0., 0., 0.
+            for (left_tree, right_tree, true_relation) in [data[i] for i in batch]:
+                c, g, pred = self.cost_and_grad(left_tree, right_tree, true_relation)
+                grad += g
+                cost += c
+                correct += int(pred == true_relation)
+                total += 1
+            print (correct/total), cost, grad
+            converged = historical_cost == cost
+            historical_cost = cost
+            
+            # Perform adaGrad update
+            historical_grad += np.square(grad)
+            adjusted_grad = grad / (fudge_factor + np.sqrt(historical_grad))
+            self.theta -= master_stepsize * adjusted_grad
+
 
 if __name__ == "__main__":
     relu  = np.vectorize(lambda x: max(0.,x))
