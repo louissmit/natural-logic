@@ -34,7 +34,7 @@ class DataSet():
                 for l in list(open(fname, 'r')):
                     [r, t1, t2] = [w.strip() for w in l.split('\t')]
                     self.sets[name].append(
-                        (self.rels.index(r), self.parse(t1), self.parse(t2))
+                        (self.parse(t1), self.parse(t2), self.rels.index(r))
                     )
 
     def parse(self, treestr):

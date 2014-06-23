@@ -34,14 +34,16 @@ class Net():
             assert not np.isinf(norm), 'softmax is too big'
             return v / norm if norm else v
 
-        nl  = s.hyp.comparison_transfer
-        nld = s.hyp.comparison_backtrans
+        nl  = s.hyp.composition_transfer
+        nld = s.hyp.composition_backtrans
+        nl2  = s.hyp.comparison_transfer
+        nld2 = s.hyp.comparison_backtrans
         (S, T2, M2, b2, T, M, b, W) = s.params()
 
         ## Run forward
         l = left_tree.do (((T, M, b), W), nl)
         r = right_tree.do(((T, M, b), W), nl)
-        comparison = tensorLayer((l,r), (T2, M2, b2), nl)
+        comparison = tensorLayer((l,r), (T2, M2, b2), nl2)
         softmax = normalize(np.exp( S.dot(np.append(1, comparison)) ))
         
         cost = -np.log(softmax[true_relation])
@@ -49,11 +51,11 @@ class Net():
         ## Get gradients
         # softmax
         diff = softmax - np.eye(s.hyp.classes)[true_relation]
-        delta = ( nld(np.append(1, comparison)) * S.T.dot(diff) )[1:]
+        delta = ( nld2(np.append(1, comparison)) * S.T.dot(diff) )[1:]
         gS = np.append(1, comparison) * diff[:, None] # outer product?
         # comparison
         (gT2, gM2, gb2), (delta_l, delta_r) = \
-            tensorGrad ((l,r), (T2, M2, b2), delta, nld, comparison)
+            tensorGrad ((l,r), (T2, M2, b2), delta, nld2, comparison)
         # composition
         ((gTl, gMl, gbl), gWl) = left_tree.grad (delta_l, l, ((T, M, b), W), nld)
         ((gTr, gMr, gbr), gWr) = right_tree.grad(delta_r, r, ((T, M, b), W), nld)
