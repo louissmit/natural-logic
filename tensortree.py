@@ -74,6 +74,7 @@ class SGD():
     def cost_and_grad(s, left_tree, right_tree, true_relation, param):
         def normalize(v):
             norm = np.linalg.norm(v)
+            assert not np.isinf(norm), 'softmax is too big'
             return v / norm if norm else v
 
         nl  = s.hyp.comparison_transfer
@@ -84,7 +85,7 @@ class SGD():
         l, r = left_tree.do(s.hyp, param), right_tree.do(s.hyp, param)
         comparison = tensorLayer((l,r), param.comparison, nl)
         softmax = normalize(np.exp( S.dot(np.append(1, comparison)) ))
-
+        
         cost = -np.log(softmax[true_relation])
         
         ## Get gradients
@@ -112,6 +113,25 @@ class Parameters():
         self.comparison  = init_ntn_params(hyp.word_size, hyp.comparison_size)
         self.softmax = np.random.randn(hyp.classes, hyp.comparison_size+1)
 
+    def grad(self, (gS, (gT2, gM2, gb2), (gT, gM, gb), gW), scale):
+        """ Ugly parameter update """
+        assert not np.any(np.isnan(gS))
+        self.softmax += gS * scale
+        (T2, M2, b2) = self.comparison
+        T2 += gT2 * scale
+        M2 += gM2 * scale
+        b2 += gb2 * scale
+        (T, M, b) = self.composition
+        T += gT * scale
+        M += gM * scale
+        b += gb * scale
+        for i in self.vocab.keys():
+            if (i,0) in gW:
+                # really now
+                for (_,j), a in gW[i].iteritems():
+                    assert not np.isnan(a)
+                    self.vocab[i][j] += a * scale
+
 if __name__ == "__main__":
     relu  = np.vectorize(lambda x: max(0.,x))
     relud = np.vectorize(lambda x: float(x>0))
@@ -126,11 +146,15 @@ if __name__ == "__main__":
     hyp.comparison_transfer = relu
     hyp.comparison_backtrans = relud
 
-    param = Parameters()
+    param = Parameters(hyp)
 
     l = Leaf(0)
     r = Tree(Tree(Leaf(0), Leaf(0)), Leaf(0))
 
     sgd = SGD(hyp)
-    print sgd.cost_and_grad(l,r,2, param)
+    cost, grad, prediction = sgd.cost_and_grad(l,r,2, param)
+    param.grad(grad)
+
+
+
 
