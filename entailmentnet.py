@@ -78,6 +78,7 @@ class Net():
         while not converged:
             np.random.shuffle(indexes)
             batch = indexes[:self.hyp.batch_size]
+
             # Get gradient of batch
             grad = np.zeros(self.theta.size)
             cost, correct, total = 0., 0., 0.
@@ -87,10 +88,16 @@ class Net():
                 cost += c
                 correct += int(pred == true_relation)
                 total += 1
+            # Normalize, Regularize
+            cost = cost / self.hyp.batch_size
+            cost += self.hyp.l2_lambda/2 * np.sum(np.square(self.theta))
+            grad = grad / self.hyp.batch_size
+            grad += self.hyp.l2_lambda * self.theta
+
             print (correct/total), cost, grad
-            converged = historical_cost == cost
+            converged = abs(historical_cost - cost) < 1e-8
             historical_cost = cost
-            
+
             # Perform adaGrad update
             historical_grad += np.square(grad)
             adjusted_grad = grad / (fudge_factor + np.sqrt(historical_grad))
@@ -110,6 +117,7 @@ if __name__ == "__main__":
     hyp.composition_backtrans = relud
     hyp.comparison_transfer = relu
     hyp.comparison_backtrans = relud
+    hyp.l2_lambda = 0.0002
 
     net = Net(hyp)
 
