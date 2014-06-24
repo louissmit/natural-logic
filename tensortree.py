@@ -45,7 +45,7 @@ class Tree(Leaf):
         
     def do(self, (p, W), nl):
         """ Forward pass """
-        l, r = self.left.do(param, nl), self.right.do(param, nl)
+        l, r = self.left.do((p, W), nl), self.right.do((p, W), nl)
         self.vec = tensorLayer((l,r), p, nl)
         return self.vec
     
