@@ -69,8 +69,8 @@ class Net():
     def adaGrad(self, data):
         # http://xcorr.net/2014/01/23/adagrad-eliminating-learning-rates-in-stochastic-gradient-descent/
         indexes = np.arange(len(data))
-        master_stepsize = 1e-2 # for example
-        fudge_factor = 1e-6 # for numerical stability
+        master_stepsize = 0.2 # for example
+        fudge_factor = 0.001 # for numerical stability
         historical_grad = np.zeros(self.theta.size)
         historical_cost = float('inf')
         converged = False
