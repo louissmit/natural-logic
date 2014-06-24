@@ -28,26 +28,51 @@ class Net():
 
     # np.hstack(p.flat for p in par2.params())
 
-    def cost_and_grad(s, left_tree, right_tree, true_relation):
+    def soft_max(self, l, r, true_relation, comparison, params):
         def normalize(v):
             norm = np.linalg.norm(v)
             assert not np.isinf(norm), 'softmax is too big'
             return v / norm if norm else v
 
-        nl  = s.hyp.composition_transfer
-        nld = s.hyp.composition_backtrans
-        nl2  = s.hyp.comparison_transfer
-        nld2 = s.hyp.comparison_backtrans
-        (S, T2, M2, b2, T, M, b, W) = s.params()
+        (S, T2, M2, b2, T, M, b, W) = params
+
+        softmax = normalize(np.exp(S.dot(np.append(1, comparison))))
+        cost = -np.log(softmax[true_relation])
+        return softmax, cost
+
+    def predict(self, left_tree, right_tree):
+        nl  = self.hyp.composition_transfer
+        nld = self.hyp.composition_backtrans
+        nl2  = self.hyp.comparison_transfer
+        nld2 = self.hyp.comparison_backtrans
+        params = self.params()
+        (S, T2, M2, b2, T, M, b, W) = params
 
         ## Run forward
         l = left_tree.do (((T, M, b), W), nl)
         r = right_tree.do(((T, M, b), W), nl)
+
         comparison = tensorLayer((l,r), (T2, M2, b2), nl2)
-        softmax = normalize(np.exp( S.dot(np.append(1, comparison)) ))
-        
-        cost = -np.log(softmax[true_relation])
-        
+
+        softmax = self.soft_max(l, r, 0, comparison, params)[0]
+        return np.argmax(softmax)
+
+    def cost_and_grad(s, left_tree, right_tree, true_relation):
+        nl  = s.hyp.composition_transfer
+        nld = s.hyp.composition_backtrans
+        nl2  = s.hyp.comparison_transfer
+        nld2 = s.hyp.comparison_backtrans
+        params = s.params()
+        (S, T2, M2, b2, T, M, b, W) = params
+
+        ## Run forward
+        l = left_tree.do (((T, M, b), W), nl)
+        r = right_tree.do(((T, M, b), W), nl)
+
+        comparison = tensorLayer((l,r), (T2, M2, b2), nl2)
+
+        softmax, cost = s.soft_max(l, r, true_relation, comparison, params)
+
         ## Get gradients
         # softmax
         diff = softmax - np.eye(s.hyp.classes)[true_relation]
@@ -68,17 +93,27 @@ class Net():
 
     def adaGrad(self, data):
         # http://xcorr.net/2014/01/23/adagrad-eliminating-learning-rates-in-stochastic-gradient-descent/
-        indexes = np.arange(len(data))
+        train_indices = np.arange(int(0.85 * len(data)))
+        test_indices = np.arange(int(0.85 * len(data)), len(data))
         master_stepsize = 0.2 # for example
         fudge_factor = 0.001 # for numerical stability
         historical_grad = np.zeros(self.theta.size)
         historical_cost = float('inf')
         converged = False
+        test_frequency = 5
+        iters = 0
 
         while not converged:
-            np.random.shuffle(indexes)
-            batch = indexes[:self.hyp.batch_size]
+            if iters % test_frequency == 0:
+                test_correct, test_total = 0., 0.
+                for (left_tree, right_tree, true_relation) in [data[i] for i in test_indices]:
+                    pred = self.predict(left_tree, right_tree)
+                    test_correct += int(pred == true_relation)
+                    test_total += 1
+                print 'test accuracy: ', test_correct / test_total
 
+            np.random.shuffle(train_indices)
+            batch = train_indices[:self.hyp.batch_size]
             # Get gradient of batch
             grad = np.zeros(self.theta.size)
             cost, correct, total = 0., 0., 0.
@@ -102,6 +137,7 @@ class Net():
             historical_grad += np.square(grad)
             adjusted_grad = grad / (fudge_factor + np.sqrt(historical_grad))
             self.theta -= master_stepsize * adjusted_grad
+            iters += 1
 
 
 if __name__ == "__main__":
