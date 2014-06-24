@@ -31,7 +31,7 @@ class Leaf():
         gb, gM, gT = np.zeros(b.shape), np.zeros(M.shape), np.zeros(T.shape)
         # Keep word gradients in a sparse array, so we can add them up
         gW = dok_matrix(W.shape)
-        gW[self.i] = delta
+        gW[self.i, :] = delta
         return ((gT, gM, gb), gW)
 
     def __str__(self):
