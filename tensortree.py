@@ -43,10 +43,10 @@ class Tree(Leaf):
         self.right = right
         self.vec = None # store activation
         
-    def do(self, param, nl):
+    def do(self, (p, W), nl):
         """ Forward pass """
         l, r = self.left.do(param, nl), self.right.do(param, nl)
-        self.vec = tensorLayer((l,r), param[0], nl)
+        self.vec = tensorLayer((l,r), p, nl)
         return self.vec
     
     def grad(self, delta, output, param, nld):
@@ -80,6 +80,7 @@ if __name__ == "__main__":
     tree = Tree(Tree(Leaf(0), Leaf(1)), Leaf(2))
     d =  tree.do(((T, M, b), W), nl)
     print d
+
     print tree.grad(gold-d, d, ((T, M, b), W), nld)
 
 
