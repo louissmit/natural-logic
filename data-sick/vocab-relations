@@ -1,0 +1,7 @@
+A_contradicts_B-B_contradicts_A
+A_contradicts_B-B_neutral_A
+A_entails_B-B_contradicts_A
+A_entails_B-B_entails_A
+A_entails_B-B_neutral_A
+A_neutral_B-B_contradicts_A
+A_neutral_B-B_neutral_A
