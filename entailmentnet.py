@@ -14,7 +14,7 @@ class Net():
             + ntn_dims(hyp.word_size, hyp.comparison_size) \
             + ntn_dims(hyp.word_size, hyp.word_size) \
             + ((hyp.vocab_size, hyp.word_size),)
-        self.theta = np.random.randn(np.sum(np.prod(d) for d in self.dims))
+        self.theta = np.random.uniform(-0.01, 0.01, np.sum(np.prod(d) for d in self.dims))
 
     def params(self):
         """ Grab the slices of theta and assemble them """
