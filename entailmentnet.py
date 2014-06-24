@@ -145,7 +145,7 @@ if __name__ == "__main__":
     relud = np.vectorize(lambda x: float(x>0))
 
     hyp = HyperParameters()
-    hyp.vocab_size = 100
+    hyp.vocab_size = 10
     hyp.word_size = 2
     hyp.comparison_size = 4
     hyp.classes = 7
@@ -158,10 +158,22 @@ if __name__ == "__main__":
     net = Net(hyp)
 
     l = Leaf(0)
-    r = Tree(Tree(Leaf(0), Leaf(0)), Leaf(0))
+    r = Tree(Tree(Leaf(1), Leaf(2)), Leaf(3))
 
     # cost, grad, prediction = net.cost_and_grad(l,r,2)
     # param.grad(grad)
 
-    print net.cost_and_grad(l,r,2)
+    c, g, p = net.cost_and_grad(l,r,2)
+    print 'cost: ', c
+
+    print 'Gradient check:'
+    checks = []
+    for i in range(len(net.theta)-1):
+        net.theta[i] += 1e-4
+        c1 = net.cost_and_grad(l,r,2)[0]
+        net.theta[i] -= 2e-4
+        c2 = net.cost_and_grad(l,r,2)[0]
+        net.theta[i] += 1e-4
+        checks += [(g[i], ((c1 - c2) / 2e-4))]
+    print checks
 
