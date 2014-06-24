@@ -3,7 +3,7 @@ from os.path import isfile, join
 from tensortree import Leaf, Tree
 
 class DataSet():
-    def __init__(self, fname):
+    def __init__(self, fname, relations_file=None):
         def make(l, w):
             if w in l:
                 return l.index(w)
@@ -14,14 +14,28 @@ class DataSet():
         self.vocab = []
         self.rels = []
         self.pairs = set()
-        for l in list(open(fname, 'r')):
-            if not l[0] is '%' and l.split():
-                [rel, w1, w2] = l.split()                        
-                self.pairs.add((
-                    make(self.rels, rel), 
-                    make(self.vocab, w1), 
-                    make(self.vocab, w2))
-                )
+
+        if not relations_file:
+            # Bowman style
+            for l in list(open(fname, 'r')):
+                if not l[0] is '%' and l.split():
+                    [rel, w1, w2] = l.split()                        
+                    self.pairs.add((
+                        make(self.rels, rel), 
+                        make(self.vocab, w1), 
+                        make(self.vocab, w2))
+                    )
+        else:
+            # Seperate vocab file style
+            for l in list(open(fname, 'r')):
+                if not l[0] is '%':
+                    w = l.split()
+                    make(self.vocab, w[0])
+            for l in list(open(relations_file, 'r')):
+                if not l[0] is '%':
+                    r = l.split()
+                    make(self.rels, r[0])
+
         self.sets = {}
 
     def load_sents(self, fpath):
@@ -62,8 +76,10 @@ class DataSet():
                 return Leaf(self.vocab.index(t))
             elif len(t) == 2:
                 return Tree(walk(t[0]), walk(t[1]))
+            elif len(t) == 1:
+                return walk(t[0])
             else:
-                raise Exception('nonbinary tree')
+                raise Exception('nonbinary tree: '+str(len(t))+'\n'+str(t))
 
         nest, _ = p([], treestr.split())
         return walk(nest)
@@ -74,3 +90,9 @@ if __name__ == "__main__":
     d.load_sents('data-4')
     print d.sets.keys()
     print d.sets[d.sets.keys()[0]][0]
+
+
+    d2 = DataSet('data-sick/vocab', relations_file='data-sick/vocab-relations')
+    d2.load_sents('data-sick')
+    print d2.sets.keys()
+    print d2.sets[d2.sets.keys()[0]][0]
