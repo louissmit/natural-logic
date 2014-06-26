@@ -10,8 +10,11 @@ def tensorGrad ((l,r), (T, M, b), delta, nld, output):
     """ Compute Tensor Layer Gradients """
     g = nld(output) * delta
     gb = g
-    gM = g[:, None] * np.append(l, r)
-    gT = g[None, None].T * (l[:, None] * r)
+    gM = np.outer(g, np.append(l, r))
+    gT = np.zeros(T.shape)
+    for i in xrange(0, T.shape[0]):
+        gT[i] = g[i] * delta[i] * np.outer(l, r)
+    gTfancy = g[None, None].T * (l[:, None] * r)
     delta_l = (T.dot(r).T + M[:,:M.shape[1]/2].T).dot(g)
     delta_r = (l.dot(T).T + M[:,M.shape[1]/2:].T).dot(g)
     return (gT, gM, gb), (delta_l, delta_r)

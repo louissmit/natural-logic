@@ -1,5 +1,6 @@
 import numpy as np
 from tensortree import Leaf, Tree, tensorLayer, tensorGrad
+from pprint import pprint
 
 class HyperParameters(): pass
 
@@ -28,23 +29,23 @@ class Net():
 
     # np.hstack(p.flat for p in par2.params())
 
-    def soft_max(self, l, r, true_relation, comparison, params):
+    def soft_max(self, true_relation, comparison, params):
         def normalize(v):
-            norm = np.linalg.norm(v)
+            norm = np.sum(v)
             assert not np.isinf(norm), 'softmax is too big'
             return v / norm if norm else v
 
         (S, T2, M2, b2, T, M, b, W) = params
 
         softmax = normalize(np.exp(S.dot(np.append(1, comparison))))
-        cost = -np.log(softmax[true_relation])
+        cost = None
+        if true_relation is not None:
+            cost = -np.log(softmax[true_relation])
         return softmax, cost
 
     def predict(self, left_tree, right_tree):
         nl  = self.hyp.composition_transfer
-        nld = self.hyp.composition_backtrans
         nl2  = self.hyp.comparison_transfer
-        nld2 = self.hyp.comparison_backtrans
         params = self.params()
         (S, T2, M2, b2, T, M, b, W) = params
 
@@ -54,7 +55,7 @@ class Net():
 
         comparison = tensorLayer((l,r), (T2, M2, b2), nl2)
 
-        softmax = self.soft_max(l, r, 0, comparison, params)[0]
+        softmax = self.soft_max(None, comparison, params)[0]
         return np.argmax(softmax)
 
     def cost_and_grad(s, left_tree, right_tree, true_relation):
@@ -71,13 +72,14 @@ class Net():
 
         comparison = tensorLayer((l,r), (T2, M2, b2), nl2)
 
-        softmax, cost = s.soft_max(l, r, true_relation, comparison, params)
+        softmax, cost = s.soft_max(true_relation, comparison, params)
 
         ## Get gradients
         # softmax
         diff = softmax - np.eye(s.hyp.classes)[true_relation]
         delta = ( nld2(np.append(1, comparison)) * S.T.dot(diff) )[1:]
-        gS = np.append(1, comparison) * diff[:, None] # outer product?
+        # gS = np.append(1, comparison) * diff[:, None] # outer product?
+        gS = np.outer(diff, np.append(1, comparison))
         # comparison
         (gT2, gM2, gb2), (delta_l, delta_r) = \
             tensorGrad ((l,r), (T2, M2, b2), delta, nld2, comparison)
@@ -100,7 +102,7 @@ class Net():
         historical_grad = np.zeros(self.theta.size)
         historical_cost = float('inf')
         converged = False
-        test_frequency = 5
+        test_frequency = 50
         iters = 0
 
         while not converged:
@@ -169,11 +171,18 @@ if __name__ == "__main__":
     print 'Gradient check:'
     checks = []
     for i in range(len(net.theta)-1):
-        net.theta[i] += 1e-4
+        net.theta[i] += 1e-12
         c1 = net.cost_and_grad(l,r,2)[0]
-        net.theta[i] -= 2e-4
+        net.theta[i] -= 2e-12
         c2 = net.cost_and_grad(l,r,2)[0]
-        net.theta[i] += 1e-4
-        checks += [(g[i], ((c1 - c2) / 2e-4))]
-    print checks
+        net.theta[i] += 1e-12
+        checks += [(g[i], ((c1 - c2) / 2e-12))]
+    diff = [x[0] - x[1] for x in checks]
+    out = []
+    i = 0
+    for d in net.dims:
+        j = np.prod(d)
+        print(np.max(diff[i:i+j]))
+        i += j
+    pprint(checks)
 
