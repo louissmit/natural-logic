@@ -160,6 +160,8 @@ if __name__ == "__main__":
     l = Leaf(0)
     r = Tree(Tree(Leaf(1), Leaf(2)), Leaf(3))
 
+    print 'theta check', np.all(net.theta == np.hstack(i.flat for i in net.params()))
+
     # cost, grad, prediction = net.cost_and_grad(l,r,2)
     # param.grad(grad)
 

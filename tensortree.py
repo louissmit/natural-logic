@@ -66,7 +66,7 @@ class Tree(Leaf):
 
 if __name__ == "__main__":
     nl  = np.vectorize(lambda x: max(0.,x))
-    nld = np.vectorize(lambda x: float(x>0))
+    nld = np.vectorize(lambda x: float(x>=0))
 
     n = 2
     v = 10
@@ -82,7 +82,5 @@ if __name__ == "__main__":
     print d
 
     print tree.grad(gold-d, d, ((T, M, b), W), nld)
-
-
 
 
