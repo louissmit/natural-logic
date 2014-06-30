@@ -1,0 +1,58 @@
+
+
+
+INTRODUCTION
+Vector space models are becoming popular for a variety of natural language processing tasks. (...)
+
+Natural Language Inference is a well-defined subproblem of natural language understanding. Given two sentences, we would like to determine whether the first sentence allows us to infer the second, that is, whether the first entails the second. Since 2004, the Recognising Textual Entailment challenges have spurred the field into developing robust inference systems that can be reliably evaluated. However, there are still many challenges that prevent these systems from attaining very good results.
+
+The first large problem is data sparsity. Many entailments are based on lexical knowledge that the training set can never hope to include. Another problem is the complex linguistic composition phenomena that licence or prohibit inferences depending on semantic constructions. Both of these problems might be solved by leveraging the right statistical model, but these models need a simpler, less ambiguous data set to evaluate their core assumptions.
+
+/SICK/
+The 2014 SemEval challenge contains a task on natural language inference with a dataset of 10 000 short sentences on a small domain. These Sentences Involving Compositional Knowledge (SICK) are meant for evaluating statistical models on a more restrictive set of phenomena than the RTE dataset. (...) 
+
+
+The inference processeses underlying entailment can be modeled intuitively with natural logic. While other inference systems such as predicate logic use different types to represent entities, predicates or expressions, natural logic defines relationships over any natural language expression. 
+
+Predicate logic must make a clear distinction between lower-order and higher-order expressions, by being unable to represent quantification over predicates. Thus, while a sentence such as "All horses are animals" can be represented as $\forall x . horse(x) \rightarrow animal(x)$, the expression "All horse tails are animal tails" can only be represented in higher-order logic for which inferences are much harder to prove.
+
+In contrast, MacCartney and Manning (2009) describe a natural logic inference system which identifies valid inferences by their lexical and syntactic features using a sequence of atomic string edit operations. They find seven possible relations between natural language expressions and show how these can be joined to compute the correct inference from the phrase transformations. This avoids the distinction between atoms, predicates, modifiers and sentences, by mapping them all on one type. This also means that by representing the expressions as vectors, it might be possible to find a mapping that allows composition and inference to be learned and computed by a statistical model. (...?)
+
+
+[table: 7 natural logic relations]
+
+
+
+MONOTONICITY
+
+A central insight from work on natural logic is *monotonicity*. Given a sentence containing a quantifier, such as "all dogs bark", we can conclude a multitude of things by replacing the content words with certain related ones. Replacing "dogs", we could conclude "all poodles bark" or "all collies bark" by replacing it by a more specific concept, but not by generalizing to "all animals bark". The second content word, "bark", works the other way around. Generalizing it leads to the valid inferences "all dogs make sounds" but the more specific "bark at cars" doesn't work. This means "all" is downward monotone in its first argument, and upwards in its second. Other quantifiers are differently monotone. The quantifier "no" is downward monotone in both its arguments, because "no dogs fly" implies "no dogs fly gracefully", and "most" is upward in its second argument but does not licence any monotonicity inference in its first.
+
+The model that we're testing should capture exactly these monotonicity relations. The intuition is, that because entailment correspond to directions in the vector space, the quantifiers have the task of determining which directions are allowed and which are not. (...)
+
+
+STRICT UNAMBIGUOUS NATURAL LANGUAGE INFERENCE
+
+
+
+
+
+RECURSIVE NEURAL TENSOR NETWORKS
+
+
+EXPERIMENTS
+
+
+RESULTS
+
+
+CONCLUSIONS
+
+
+
+FUTURE WORK
+
+- semi-supervised training
+
+- proving RNTN composition invariance for (a and (a and (a and b)))
+
+- larger SU-NLI fragment with modifiers (appositive, prepositions, ...), conjunctions, presuppositions, etc 
