@@ -170,15 +170,17 @@ if __name__ == "__main__":
     c, g, p = net.cost_and_grad(l,r,2)
     print 'cost: ', c
 
+    r = l # testing
+
     print 'Gradient check:'
     checks = []
     for i in range(len(net.theta)-1):
-        net.theta[i] += 1e-12
+        net.theta[i] += 1e-1
         c1 = net.cost_and_grad(l,r,2)[0]
-        net.theta[i] -= 2e-12
+        net.theta[i] -= 2e-1
         c2 = net.cost_and_grad(l,r,2)[0]
-        net.theta[i] += 1e-12
-        checks += [(g[i], ((c1 - c2) / 2e-12))]
+        net.theta[i] += 1e-1
+        checks += [(g[i], ((c1, c2) ))]
     diff = [x[0] - x[1] for x in checks]
     out = []
     i = 0
@@ -186,5 +188,15 @@ if __name__ == "__main__":
         j = np.prod(d)
         print(np.max(diff[i:i+j]))
         i += j
-    pprint(checks)
+
+    # show check per parameter
+    dimindex = np.cumsum([np.prod(i) for i in net.dims])
+    dimname = ('S', 'T2', 'M2', 'b2', 'T', 'M', 'b', 'W')
+    j = 0
+    for i,c in enumerate(checks):
+        if i >= dimindex[j]:
+            j+=1
+        print dimname[j], checks[i]
+
+    # pprint(checks)
 
