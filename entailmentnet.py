@@ -143,8 +143,11 @@ class Net():
 
 
 if __name__ == "__main__":
-    relu  = np.vectorize(lambda x: max(0.,x))
-    relud = np.vectorize(lambda x: float(x>0))
+    # relu  = np.vectorize(lambda x: max(0.,x))
+    # relud = np.vectorize(lambda x: float(x>0))
+    relu = lambda x: np.maximum(x, np.zeros(x.shape) + 0.01 * np.minimum(x, np.zeros(x.shape)))
+    # relud = np.vectorize(lambda x: float(x>=0) + 0.01 * float(x<0))
+    relud = lambda x: (x >= 0).astype(float) + 0.01 * (x < 0).astype(float)
 
     hyp = HyperParameters()
     hyp.vocab_size = 10
@@ -170,7 +173,7 @@ if __name__ == "__main__":
     c, g, p = net.cost_and_grad(l,r,2)
     print 'cost: ', c
 
-    r = l # testing
+    # r = l # testing
 
     print 'Gradient check:'
     checks = []
@@ -180,8 +183,8 @@ if __name__ == "__main__":
         net.theta[i] -= 2e-1
         c2 = net.cost_and_grad(l,r,2)[0]
         net.theta[i] += 1e-1
-        checks += [(g[i], ((c1, c2) ))]
-    diff = [x[0] - x[1] for x in checks]
+        checks += [(g[i], ((c1 - c2) / 2e-1))]
+    diff = [abs(x[0] - x[1]) for x in checks]
     out = []
     i = 0
     for d in net.dims:
