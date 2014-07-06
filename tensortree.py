@@ -1,5 +1,3 @@
-from collections import Counter
-from scipy.sparse import dok_matrix
 import numpy as np
 
 def tensorLayer((l,r), (T, M, b), nl):
@@ -31,9 +29,7 @@ class Leaf():
     
     def grad(self, delta, output, ((T, M, b), W), nld):
         """ Create the gradients of a node """
-        gb, gM, gT = np.zeros(b.shape), np.zeros(M.shape), np.zeros(T.shape)
-        # Keep word gradients in a sparse array, so we can add them up
-        gW = dok_matrix(W.shape)
+        gb, gM, gT, gW = np.zeros(b.shape), np.zeros(M.shape), np.zeros(T.shape), np.zeros(W.shape)
         gW[self.i, :] = delta
         return ((gT, gM, gb), gW)
 

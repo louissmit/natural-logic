@@ -1,6 +1,7 @@
 import numpy as np
 from tensortree import Leaf, Tree, tensorLayer, tensorGrad
 from pprint import pprint
+import math
 
 class HyperParameters(): pass
 
@@ -89,14 +90,16 @@ class Net():
         ((gT, gM, gb), gW) = ((gTl + gTr, gMl + gMr, gbl + gbr), gWl + gWr)
 
         ## Pack them into a vector
-        theta_grad = np.hstack(g.flat for g in (gS, gT2, gM2, gb2, gT, gM, gb, gW.todense()))
+        theta_grad = np.hstack(g.flat for g in (gS, gT2, gM2, gb2, gT, gM, gb, gW))
         
         return cost, theta_grad, np.argmax(softmax)
 
     def adaGrad(self, data):
         # http://xcorr.net/2014/01/23/adagrad-eliminating-learning-rates-in-stochastic-gradient-descent/
-        train_indices = np.arange(int(0.85 * len(data)))
-        test_indices = np.arange(int(0.85 * len(data)), len(data))
+        indices = np.arange(0, len(data))
+        np.random.shuffle(indices)
+        train_indices = indices[:int(0.85 * len(data))]
+        test_indices = indices[int(0.85 * len(data)):]
         master_stepsize = 0.2 # for example
         fudge_factor = 0.001 # for numerical stability
         historical_grad = np.zeros(self.theta.size)
@@ -163,7 +166,7 @@ if __name__ == "__main__":
     net = Net(hyp)
 
     l = Leaf(0)
-    r = Tree(Tree(Leaf(1), Leaf(2)), Leaf(3))
+    r = Tree(Tree(Leaf(8), Leaf(5)), Leaf(6))
 
     print 'theta check', np.all(net.theta == np.hstack(i.flat for i in net.params()))
 
@@ -177,13 +180,15 @@ if __name__ == "__main__":
 
     print 'Gradient check:'
     checks = []
+    mu = 2* math.sqrt(1e-12)*(1+np.linalg.norm(net.theta))
+    print mu
     for i in range(len(net.theta)-1):
-        net.theta[i] += 1e-1
+        net.theta[i] += mu
         c1 = net.cost_and_grad(l,r,2)[0]
-        net.theta[i] -= 2e-1
+        net.theta[i] -= 2*mu
         c2 = net.cost_and_grad(l,r,2)[0]
-        net.theta[i] += 1e-1
-        checks += [(g[i], ((c1 - c2) / 2e-1))]
+        net.theta[i] += mu
+        checks += [(g[i], ((c1 - c2) / (2*mu)))]
     diff = [abs(x[0] - x[1]) for x in checks]
     out = []
     i = 0
@@ -199,7 +204,5 @@ if __name__ == "__main__":
     for i,c in enumerate(checks):
         if i >= dimindex[j]:
             j+=1
-        print dimname[j], checks[i]
-
-    # pprint(checks)
+        print dimname[j], checks[i], checks[i][0] - checks[i][1]
 
