@@ -71,7 +71,7 @@ class Net():
         l = left_tree.do (((T, M, b), W), nl)
         r = right_tree.do(((T, M, b), W), nl)
 
-        comparison = tensorLayer((l,r), (T2, M2, b2), nl2)
+        comparison = tensorLayer((l, r), (T2, M2, b2), nl2)
 
         softmax, cost = s.soft_max(true_relation, comparison, params)
 
@@ -151,22 +151,25 @@ if __name__ == "__main__":
     relu = lambda x: np.maximum(x, np.zeros(x.shape) + 0.01 * np.minimum(x, np.zeros(x.shape)))
     # relud = np.vectorize(lambda x: float(x>=0) + 0.01 * float(x<0))
     relud = lambda x: (x >= 0).astype(float) + 0.01 * (x < 0).astype(float)
+    tanh  = lambda x: np.tanh(x)
+    tanhd = lambda x: (1-(np.tanh(x)**2))
 
     hyp = HyperParameters()
     hyp.vocab_size = 10
     hyp.word_size = 2
     hyp.comparison_size = 4
     hyp.classes = 7
-    hyp.composition_transfer = relu
-    hyp.composition_backtrans = relud
+    hyp.composition_transfer = tanh
+    hyp.composition_backtrans = tanhd
     hyp.comparison_transfer = relu
     hyp.comparison_backtrans = relud
     hyp.l2_lambda = 0.0002
 
     net = Net(hyp)
 
-    l = Leaf(0)
-    r = Tree(Tree(Leaf(8), Leaf(5)), Leaf(6))
+    l = Tree(Leaf(2), Leaf(1))
+    r = Tree(Leaf(5), Leaf(6))
+    # r = Tree(Tree(Leaf(8), Leaf(5)), Leaf(6))
 
     print 'theta check', np.all(net.theta == np.hstack(i.flat for i in net.params()))
 
@@ -180,29 +183,41 @@ if __name__ == "__main__":
 
     print 'Gradient check:'
     checks = []
+    errors = []
     mu = 2* math.sqrt(1e-12)*(1+np.linalg.norm(net.theta))
-    print mu
     for i in range(len(net.theta)-1):
         net.theta[i] += mu
         c1 = net.cost_and_grad(l,r,2)[0]
         net.theta[i] -= 2*mu
         c2 = net.cost_and_grad(l,r,2)[0]
         net.theta[i] += mu
-        checks += [(g[i], ((c1 - c2) / (2*mu)))]
-    diff = [abs(x[0] - x[1]) for x in checks]
-    out = []
-    i = 0
-    for d in net.dims:
-        j = np.prod(d)
-        print(np.max(diff[i:i+j]))
-        i += j
+        approx = ((c1 - c2) / (2*mu))
+        checks += [(g[i], approx)]
+
+        error = 0.0
+        if g[i] != 0.0:
+            error = 1.0 - abs(approx / g[i])
+        errors.append(error)
+
 
     # show check per parameter
     dimindex = np.cumsum([np.prod(i) for i in net.dims])
     dimname = ('S', 'T2', 'M2', 'b2', 'T', 'M', 'b', 'W')
+
+    i = 0
+    for x, d in enumerate(net.dims):
+        j = np.prod(d)
+        print dimname[x], np.mean(errors[i:i+j])
+
+        i += j
+
     j = 0
     for i,c in enumerate(checks):
         if i >= dimindex[j]:
             j+=1
-        print dimname[j], checks[i], checks[i][0] - checks[i][1]
+        # error = 0
+        # if checks[i][1] > 0:
+        #     error = 1 - (checks[i][0] / checks[i][1])
+
+        print dimname[j], checks[i], errors[i]
 

@@ -22,7 +22,7 @@ hyp.composition_transfer = tanh
 hyp.composition_backtrans = tanhd
 hyp.comparison_transfer = relu
 hyp.comparison_backtrans = relud
-hyp.batch_size = 100
+hyp.batch_size = 35
 hyp.l2_lambda = 0.0002
 
 net = Net(hyp)
