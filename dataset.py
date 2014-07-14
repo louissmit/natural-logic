@@ -1,6 +1,7 @@
 from os import listdir
 from os.path import isfile, join
 from tensortree import Leaf, Tree
+from random import choice
 
 class DataSet():
     def __init__(self, fname, relations_file=None):
@@ -83,6 +84,18 @@ class DataSet():
 
         nest, _ = p([], treestr.split())
         return walk(nest)
+
+    def sample_balanced(self, dataset, nr):
+        """ Sample (with replacement) `nr` items from every class in `dataset`"""
+        classes = {}
+        for i in set(point[2] for point in self.sets[dataset]):
+            classes[i] = [point for point in self.sets[dataset] if point[2]==i]
+
+        for _ in range(nr):
+            for _, l in classes.iteritems():
+                yield choice(l)
+
+
 
 
 if __name__ == "__main__":
