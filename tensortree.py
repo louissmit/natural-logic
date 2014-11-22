@@ -9,14 +9,14 @@ def tensorGrad ((l,r), (T, M, b), delta, nld, output):
     g = nld(output) * delta
     gb = g
     gM = np.zeros(M.shape)
+    lr_append = np.append(l, r)
     for i in xrange(0, M.shape[0]):
-        asdf = g[i] * np.append(l, r)
-        gM[i] = asdf
+        gM[i] = g[i] * lr_append
     # gM = np.outer(g, np.append(l, r))
     gT = np.zeros(T.shape)
+    lr_outer = np.outer(l, r)
     for i in xrange(0, T.shape[0]):
-        gT[i] = g[i] * np.outer(l, r)
-    # gT = g[None, None].T * (l[:, None] * r)
+        gT[i] = g[i] * lr_outer
     delta_l = (T.dot(r).T + M[:,:M.shape[1]/2].T).dot(g)
     delta_r = (l.dot(T).T + M[:,M.shape[1]/2:].T).dot(g)
     return (gT, gM, gb), (delta_l, delta_r)

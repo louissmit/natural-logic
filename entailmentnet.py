@@ -2,6 +2,7 @@ import numpy as np
 from tensortree import Leaf, Tree, tensorLayer, tensorGrad
 from pprint import pprint
 import math
+import cPickle as pickle
 
 class HyperParameters(): pass
 
@@ -78,9 +79,10 @@ class Net():
         ## Get gradients
         # softmax
         diff = softmax - np.eye(s.hyp.classes)[true_relation]
-        delta = ( nld2(np.append(1, comparison)) * S.T.dot(diff) )[1:]
+        input_bias = np.append(1, comparison)
+        delta = S.T.dot(diff)[1:]
         # gS = np.append(1, comparison) * diff[:, None] # outer product?
-        gS = np.outer(diff, np.append(1, comparison))
+        gS = np.outer(diff, input_bias)
         # comparison
         (gT2, gM2, gb2), (delta_l, delta_r) = \
             tensorGrad ((l,r), (T2, M2, b2), delta, nld2, comparison)
@@ -105,17 +107,28 @@ class Net():
         historical_grad = np.zeros(self.theta.size)
         historical_cost = float('inf')
         converged = False
-        test_frequency = 50
+        test_frequency = 100
         iters = 0
+        cum_train_error = 0.0
+        train_error_list = []
+        test_error_list = []
 
         while not converged:
-            if iters % test_frequency == 0:
+            if iters % test_frequency == 0 and iters is not 0:
                 test_correct, test_total = 0., 0.
                 for (left_tree, right_tree, true_relation) in [data[i] for i in test_indices]:
                     pred = self.predict(left_tree, right_tree)
                     test_correct += int(pred == true_relation)
                     test_total += 1
-                print 'test accuracy: ', test_correct / test_total
+                test_accuracy = test_correct / test_total
+                print 'test accuracy: ', test_accuracy
+                test_error_list.append(test_accuracy)
+                train_error_list.append(cum_train_error / test_frequency)
+                # pickle.dump(test_error_list, open('test_error', 'w'))
+                # pickle.dump(train_error_list, open('train_error_avg', 'w'))
+
+                cum_train_error = 0.0
+                # pickle.dump(self.params(), open('params', 'w'))
 
             np.random.shuffle(train_indices)
             batch = train_indices[:self.hyp.batch_size]
@@ -134,7 +147,9 @@ class Net():
             grad = grad / self.hyp.batch_size
             grad += self.hyp.l2_lambda * self.theta
 
-            print (correct/total), cost, grad
+            train_error = (correct/total)
+            cum_train_error += train_error
+            print train_error, cost, grad
             converged = abs(historical_cost - cost) < 1e-8
             historical_cost = cost
 
